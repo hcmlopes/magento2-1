@@ -6,7 +6,10 @@
     <LazyHydrate when-visible>
       <Notification />
     </LazyHydrate>
-    <TopBar class="desktop-only" />
+    <TopBar
+      class="desktop-only"
+      v-if="!isMobile"
+    />
     <AppHeader />
     <div id="layout">
       <nuxt :key="route.fullPath" />
@@ -19,17 +22,20 @@
 <script>
 import LazyHydrate from 'vue-lazy-hydration';
 import {
-  useRoute, defineComponent, onMounted, useAsync,
+  useRoute, defineComponent, onMounted, useAsync, onBeforeUnmount, computed,
 } from '@nuxtjs/composition-api';
 import {
   useUser,
 } from '@vue-storefront/magento';
+import {
+  mapMobileObserver,
+  unMapMobileObserver,
+} from '@storefront-ui/vue/src/utilities/mobile-observer.js';
 import useUiState from '~/composables/useUiState.ts';
 
 import { useMagentoConfiguration } from '~/composables/useMagentoConfiguration';
 import AppHeader from '~/components/AppHeader.vue';
 import BottomNavigation from '~/components/BottomNavigation.vue';
-import TopBar from '~/components/TopBar';
 
 export default defineComponent({
   name: 'DefaultLayout',
@@ -37,8 +43,8 @@ export default defineComponent({
   components: {
     LazyHydrate,
     AppHeader,
-    TopBar,
     BottomNavigation,
+    TopBar: () => import(/* webpackPrefetch: true */ '~/components/TopBar'),
     AppFooter: () => import(/* webpackPrefetch: true */ '~/components/AppFooter.vue'),
     CartSidebar: () => import(/* webpackPrefetch: true */ '~/components/CartSidebar.vue'),
     WishlistSidebar: () => import(/* webpackPrefetch: true */ '~/components/WishlistSidebar.vue'),
@@ -51,6 +57,7 @@ export default defineComponent({
     const { load: loadUser } = useUser();
     const { loadConfiguration } = useMagentoConfiguration();
     const { isCartSidebarOpen, isWishlistSidebarOpen, isLoginModalOpen } = useUiState();
+    const isMobile = computed(() => mapMobileObserver().isMobile.get());
 
     useAsync(() => {
       loadConfiguration();
@@ -60,10 +67,15 @@ export default defineComponent({
       loadUser();
     });
 
+    onBeforeUnmount(() => {
+      unMapMobileObserver();
+    });
+
     return {
       isCartSidebarOpen,
       isWishlistSidebarOpen,
       isLoginModalOpen,
+      isMobile,
       route,
     };
   },
